@@ -80,6 +80,13 @@ function Forward-DnsQuery([byte[]]$data) {
     }
 }
 
+# Single-instance guard: the UDP bind uses SO_REUSEADDR, so a second relay
+# would silently stack on top of the first (both answer :53 -> double
+# forwarding + duplicate CSV rows). If another live relay holds this mutex,
+# exit. The kernel releases it automatically when the owner dies.
+$relayMutex = New-Object System.Threading.Mutex($false, "Global\PiholeDnsRelay")
+if (-not $relayMutex.WaitOne(0)) { Write-Log "another relay instance is running - exiting"; exit 0 }
+
 # Wait for Pi-hole to be reachable (WSL may still be starting at boot).
 # Retries forever so the relay can be started at logon before WSL is up.
 Write-Log "Waiting for Pi-hole at ${targetHost}:${targetPort} ..."
@@ -107,6 +114,7 @@ try {
 } catch {
     Write-Log "WARNING: could not start TCP leg: $($_.Exception.Message)"
 }
+$lastRestart = Get-Date
 
 try {
     # --- UDP :53 listener ---
@@ -128,15 +136,28 @@ try {
     $remote = New-Object System.Net.IPEndPoint([System.Net.IPAddress]::Any, 0)
     $udp.Client.ReceiveTimeout = 1000
 
+    $tick = 0
     while ($true) {
-        # Supervise the TCP leg: restart it if it died.
-        if ($tcpProc -and $tcpProc.HasExited) {
-            Write-Log "TCP leg exited (code $($tcpProc.ExitCode)) - restarting"
+        $tick++
+        # Supervise the TCP leg. Fast path: process exited. Slow path (every
+        # ~15s): probe the port, because Process.HasExited proved unreliable
+        # in PS 5.1 - a dead child must still be detected via its socket.
+        # The 20s grace period avoids killing a child that is still starting.
+        $needRestart = ($null -ne $tcpProc -and $tcpProc.HasExited)
+        if (-not $needRestart -and ($tick % 15 -eq 0) -and
+            (Get-Date).Subtract($lastRestart).TotalSeconds -gt 20) {
+            $needRestart = -not [bool](netstat -ano | Select-String -Pattern '^\s*TCP\s+\S+:53\s+.*LISTENING')
+        }
+        if ($needRestart) {
+            Write-Log "TCP leg down - restarting"
+            if ($tcpProc) { Stop-Process -Id $tcpProc.Id -Force -ErrorAction SilentlyContinue }
             try {
                 $tcpProc = Start-Process powershell.exe `
                     -ArgumentList "-NoProfile","-ExecutionPolicy","Bypass","-WindowStyle","Hidden","-File",$tcpScript `
                     -PassThru -WindowStyle Hidden
+                Write-Log "TCP leg restarted (PID $($tcpProc.Id))"
             } catch { Write-Log "TCP leg restart failed: $($_.Exception.Message)" }
+            $lastRestart = Get-Date
         }
 
         try { $data = $udp.Receive([ref]$remote) } catch { continue }   # receive timeout

@@ -1,4 +1,4 @@
-# relay-watchdog.ps1 — restarts the DNS relay if its UDP :53 listener is gone.
+# relay-watchdog.ps1 - restarts the DNS relay if its UDP :53 listener is gone.
 #
 # The relay (dns-relay.ps1) supervises its TCP child, but nothing supervises
 # the parent: if it is killed externally (window closed, sign-out), UDP :53
@@ -23,15 +23,18 @@ function Write-Log([string]$msg) {
 
 # Is anything listening on UDP :53? (netstat line: "  UDP    0.0.0.0:53   *:*   PID")
 $udpUp = [bool](netstat -ano | Select-String -Pattern '^\s*UDP\s+\S+:53\s')
-if ($udpUp) { exit 0 }   # healthy — stay silent
+if ($udpUp) { exit 0 }   # healthy - stay silent
 
-Write-Log "UDP :53 not listening — restarting relay"
+Write-Log "UDP :53 not listening - restarting relay"
 
-# Kill any stale relay processes (dead parent's orphaned TCP child included),
-# so the fresh start binds cleanly instead of stacking on orphans.
-Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" |
-    Where-Object { $_.CommandLine -like '*dns-relay.ps1*' -or $_.CommandLine -like '*dns-relay-tcp.ps1*' } |
-    ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+# Kill the orphaned TCP child (if any) by its port ownership. Command-line
+# lookup is unreliable for detached powershell.exe, so use netstat PIDs.
+# The single-instance mutex in dns-relay.ps1 guarantees no live parent exists
+# when UDP :53 is down, so the only stale process can be the TCP child.
+foreach ($line in (netstat -ano | Select-String -Pattern '^\s*TCP\s+\S+:53\s+.*LISTENING')) {
+    $stalePid = ($line -split '\s+')[-1]
+    if ($stalePid -match '^\d+$') { Stop-Process -Id $stalePid -Force -ErrorAction SilentlyContinue }
+}
 Start-Sleep 2
 
 # Start a fresh relay, detached from this watchdog process.
