@@ -1,8 +1,16 @@
-# Gateway (reverse proxy) — design stub
+# Gateway (reverse proxy)
 
-> **Status: not implemented.** This folder is a placeholder for the single-port
-> HTTPS gateway. It will hold the Caddyfile template, Authelia config, and
-> fail2ban rules when built (see `docs/architecture.md`, "Target architecture").
+> **Status: Phase 1 done** — the Django homepage is served on :443 with a real
+> Let's Encrypt certificate via `setup.sh` + the `Caddyfile` template. Remaining:
+> all other services, Authelia unified login, fail2ban (see
+> `docs/architecture.md`, "Target architecture").
+
+## Files
+
+| File | Purpose |
+|---|---|
+| `Caddyfile` | **Template** — `{env.DDNS_HOST}` is a placeholder rendered from `.env` by `setup.sh` (the Caddyfile format does not expand env vars itself). Re-run setup after changing the hostname. |
+| `setup.sh` | Idempotent root script: installs Caddy, moves Django to 127.0.0.1:8000, renders + validates the Caddyfile, starts Caddy, waits for the LE cert. |
 
 ## What it will do
 

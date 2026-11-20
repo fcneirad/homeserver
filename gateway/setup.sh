@@ -26,6 +26,7 @@ systemctl restart homeserver
 # The Caddyfile format does NOT expand env placeholders, so we render at install
 # time; re-run this script after changing DDNS_HOST in .env.
 rm -rf /etc/systemd/system/caddy.service.d   # drop-in from earlier revisions, unused now
+systemctl daemon-reload
 sed "s|{env.DDNS_HOST}|${DDNS_HOST}|g" "$REPO_DIR/gateway/Caddyfile" > /etc/caddy/Caddyfile
 chmod 644 /etc/caddy/Caddyfile
 if ! caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile; then
