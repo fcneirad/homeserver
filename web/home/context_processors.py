@@ -1,19 +1,23 @@
 from urllib.parse import urlsplit
 
+# Subdomain per service — must mirror the site blocks in gateway/Caddyfile.
+# Port-based URLs (scheme://host:PORT) only work on the LAN; from outside,
+# only 80/443 are forwarded, so every link must go through the gateway.
+SUBDOMAINS = {
+    'jellyfin': 'jellyfin',
+    'qbittorrent': 'qbittorrent',
+    'radarr': 'radarr',
+    'sonarr': 'sonarr',
+    'bazarr': 'bazarr',
+    'prowlarr': 'prowlarr',
+    'seerr': 'seerr',
+    'unsloth': 'unsloth',
+}
+
 
 def service_urls(request):
     host = urlsplit(f'//{request.get_host()}').hostname
 
-    return {
-        'service_urls': {
-            'jellyfin': f'{request.scheme}://{host}:8096',
-            'qbittorrent': f'{request.scheme}://{host}:8080',
-            'radarr': f'{request.scheme}://{host}:7878',
-            'sonarr': f'{request.scheme}://{host}:8989',
-            'bazarr': f'{request.scheme}://{host}:6767',
-            'prowlarr': f'{request.scheme}://{host}:9696',
-            'seerr': f'{request.scheme}://{host}:5055',
-            'unsloth': f'{request.scheme}://{host}:8888',
-            'pihole': f'https://{host}:8443/admin/',
-        },
-    }
+    urls = {name: f'https://{sub}.{host}/' for name, sub in SUBDOMAINS.items()}
+    urls['pihole'] = f'https://pihole.{host}/admin/'
+    return {'service_urls': urls}
