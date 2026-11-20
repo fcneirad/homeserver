@@ -1,0 +1,25 @@
+# authelia/authelia.service — installed by gateway/setup.sh to /etc/systemd/system/.
+# Modeled on the vendor-shipped unit (from the release tarball) with the
+# healthcheck left enabled so setup.sh can probe /healthz.
+[Unit]
+Description=Authelia authentication and authorization server
+Documentation=https://www.authelia.com
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=authelia
+Group=authelia
+UMask=027
+ExecStart=/usr/bin/authelia --config /etc/authelia/configuration.yml
+SyslogIdentifier=authelia
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=yes
+PrivateDevices=yes
+ProtectHome=true
+ProtectSystem=full
+ReadWritePaths=/var/lib/authelia
+
+[Install]
+WantedBy=multi-user.target

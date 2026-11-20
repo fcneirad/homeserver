@@ -1,0 +1,67 @@
+# Authelia configuration — TEMPLATE, rendered by gateway/setup.sh into
+# /etc/authelia/configuration.yml. The __TOKENS__ are substituted from .env;
+# never edit the rendered file directly (it is overwritten on every re-run).
+#
+# Schema reference: https://www.authelia.com/reference/configuration/
+
+theme: light
+default_2fa_method: totp
+
+log:
+  level: info
+  format: text
+
+server:
+  # Loopback only — Caddy is the sole entry point (forward_auth + login UI).
+  address: tcp://127.0.0.1:9091
+
+session:
+  secret: __AUTHELIA_SESSION_SECRET__
+  cookies:
+    # The cookie domain is dot-prefixed automatically (e.g. .example.com),
+    # which makes ONE session valid on every subdomain — that's what turns
+    # this into SSO.
+    - domain: __DDNS_HOST__
+      name: authelia_session
+      # Where unauthenticated forward-auth requests get redirected (login UI).
+      # Required: Caddy's forward_auth does not send X-Authelia-URL, so without
+      # this the redirect target lookup fails and users see an error instead of
+      # the login page.
+      authelia_url: https://auth.__DDNS_HOST__/
+      same_site: lax
+      expiration: 1 hour
+      inactivity: 30 minutes
+      remember_me: 30 days
+
+authentication_backend:
+  file:
+    path: /var/lib/authelia/users.yaml
+    watch: true   # hot-reload users on change (see create-user.sh)
+  password_reset:
+    disable: true   # no mail server; reset would need SMTP + jwt_secret
+
+# Required by Authelia even when unused. The filesystem notifier writes any
+# notifications to a file instead of sending mail (nothing is sent today).
+notifier:
+  filesystem:
+    filename: /var/lib/authelia/notifications.txt
+
+storage:
+  encryption_key: __AUTHELIA_STORAGE_ENCRYPTION_KEY__
+  local:
+    path: /var/lib/authelia/authelia.db
+
+totp:
+  issuer: __DDNS_HOST__
+
+# Built-in brute-force lockout (per user AND per IP), in front of fail2ban.
+regulation:
+  modes: [user, ip]
+  max_retries: 3
+  find_time: 5 minutes
+  ban_time: 10 minutes
+
+access_control:
+  # one_factor = password only; two_factor = password + TOTP on every login.
+  # This gateway is internet-exposed — keep two_factor.
+  default_policy: two_factor

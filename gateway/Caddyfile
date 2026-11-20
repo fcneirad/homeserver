@@ -12,46 +12,76 @@
 # both pointing at the server's public IP.
 #
 # Adding a service later = add one site block + (if no wildcard DNS) one A record.
+#
+# --- Authentication (Authelia) -------------------------------------------
+# Every service below imports the `authelia` snippet, which makes Caddy ask
+# Authelia (127.0.0.1:9091) before proxying. Unauthenticated requests get a
+# redirect to https://auth.{env.DDNS_HOST}/ (login UI). One session cookie is
+# shared across all subdomains (domain .{env.DDNS_HOST}) = single sign-on.
+# To open up a service again: delete its `import authelia` line + re-run setup.
+
+(authelia) {
+	forward_auth 127.0.0.1:9091 {
+		# v4 forward-auth endpoint (the bare /api/authz path is a base, not a route).
+		uri /api/authz/forward-auth
+		copy_headers Remote-User Remote-Email Remote-Name Remote-Groups
+	}
+}
+
+# The login UI itself (must NOT be gated, or nobody could ever log in).
+auth.{env.DDNS_HOST} {
+	reverse_proxy 127.0.0.1:9091
+}
 
 {env.DDNS_HOST} {
+	import authelia
 	reverse_proxy 127.0.0.1:8000
 }
 
 jellyfin.{env.DDNS_HOST} {
+	import authelia
 	reverse_proxy 127.0.0.1:8096
 }
 
 radarr.{env.DDNS_HOST} {
+	import authelia
 	reverse_proxy 127.0.0.1:7878
 }
 
 sonarr.{env.DDNS_HOST} {
+	import authelia
 	reverse_proxy 127.0.0.1:8989
 }
 
 prowlarr.{env.DDNS_HOST} {
+	import authelia
 	reverse_proxy 127.0.0.1:9696
 }
 
 seerr.{env.DDNS_HOST} {
+	import authelia
 	reverse_proxy 127.0.0.1:5055
 }
 
 bazarr.{env.DDNS_HOST} {
+	import authelia
 	reverse_proxy 127.0.0.1:6767
 }
 
 qbittorrent.{env.DDNS_HOST} {
+	import authelia
 	reverse_proxy 127.0.0.1:8080
 }
 
 unsloth.{env.DDNS_HOST} {
+	import authelia
 	reverse_proxy 127.0.0.1:8888
 }
 
 # Pi-hole's web UI already speaks TLS (self-signed) on :8443, so proxy to it
 # over HTTPS and skip verification of its local cert.
 pihole.{env.DDNS_HOST} {
+	import authelia
 	reverse_proxy https://127.0.0.1:8443 {
 		transport http {
 			tls_insecure_skip_verify
