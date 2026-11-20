@@ -22,17 +22,18 @@ fi
 systemctl daemon-reload
 systemctl restart homeserver
 
-# 3. Caddyfile + env drop-in (so {env.DDNS_HOST} resolves)
-install -m 644 "$REPO_DIR/gateway/Caddyfile" /etc/caddy/Caddyfile
-mkdir -p /etc/systemd/system/caddy.service.d
-printf '[Service]\nEnvironmentFile=-%s/.env\n' "$REPO_DIR" > /etc/systemd/system/caddy.service.d/env.conf
-systemctl daemon-reload
-
-# 4. Validate the config, then start Caddy and wait for the LE cert (first run)
+# 3. Render the Caddyfile template (substitute {env.DDNS_HOST}) and validate it.
+# The Caddyfile format does NOT expand env placeholders, so we render at install
+# time; re-run this script after changing DDNS_HOST in .env.
+rm -rf /etc/systemd/system/caddy.service.d   # drop-in from earlier revisions, unused now
+sed "s|{env.DDNS_HOST}|${DDNS_HOST}|g" "$REPO_DIR/gateway/Caddyfile" > /etc/caddy/Caddyfile
+chmod 644 /etc/caddy/Caddyfile
 if ! caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile; then
   echo "Caddyfile invalid — check DDNS_HOST in $REPO_DIR/.env"
   exit 1
 fi
+
+# 4. Start Caddy and wait for the Let's Encrypt cert (first run takes a moment)
 systemctl restart caddy
 echo "==> waiting for https://$DDNS_HOST/ (LE cert issuance on first run) ..."
 ok=""

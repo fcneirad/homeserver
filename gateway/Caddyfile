@@ -1,7 +1,9 @@
-# gateway/Caddyfile — single-port HTTPS gateway (Phase 1 pilot: homepage only).
+# gateway/Caddyfile — TEMPLATE for the single-port HTTPS gateway.
+# Phase 1 pilot: homepage only.
 #
-# The hostname comes from .env via Caddy's {env.DDNS_HOST} placeholder
-# (setup.sh installs a systemd EnvironmentFile drop-in so caddy sees it).
+# {env.DDNS_HOST} is a template placeholder, NOT a Caddy feature: setup.sh
+# renders it from DDNS_HOST in .env into /etc/caddy/Caddyfile. Re-run
+# `sudo bash gateway/setup.sh` after changing the hostname.
 #
 # Router requirement: forward TCP 80 + 443 to this server.
 #   - 443: all HTTPS traffic
