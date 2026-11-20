@@ -76,6 +76,7 @@ Key choices and why:
 | `dns-relay-tcp.ps1` | TCP :53 leg (child process of the above). Two processes because PowerShell 5.1 background threads can't see the parent script's scope. |
 | `device_report.py` | Per-device reports. `--relay-csv <path>` reads the relay CSV (the mirrored-mode source of truth); default mode reads the FTL DB. `--all-devices` lists every client + top domains. |
 | `check_health.sh` | Sanity check: FTL service, :1053 bind, web UI on 8443, live test query via :53 (exercises the relay). |
+| `relay-watchdog.ps1` | Restarts the relay if its UDP :53 listener is gone (the parent has no supervisor of its own — see Operations). Run from a scheduled task every few minutes. |
 | `windows-firewall.ps1` | One-time inbound Windows Firewall rules for :53 (UDP+TCP) and :8443. Run once as Administrator. |
 | `diagnostics/` | Historical root-cause scripts from bring-up (NAT/portproxy attempt, Dnscache dead end, one-off proofs). See its README. Not needed for operation. |
 
@@ -108,6 +109,13 @@ Key choices and why:
    - **Auto-start** (needs an elevated PowerShell):
      ```powershell
      schtasks /Create /SC ONLOGON /TN "Pi-hole DNS Relay" /TR "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File %USERPROFILE%\dns-relay.ps1" /F
+     ```
+   - **Watchdog** (same elevation) — the relay's parent process has no supervisor of
+     its own: if it is killed externally (window closed, sign-out), UDP :53 dies
+     silently while the orphaned TCP child keeps running. This task restarts the
+     relay whenever the UDP listener is missing:
+     ```powershell
+     schtasks /Create /SC MINUTE /MO 5 /TN "Pi-hole DNS Relay Watchdog" /TR "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File %USERPROFILE%\relay-watchdog.ps1" /F
      ```
 4. **Router**: admin UI → LAN/DHCP settings, set DNS Server 1 = the server's LAN IP
    (optionally `1.1.1.1` as Server 2). Every device that gets an IP from this
