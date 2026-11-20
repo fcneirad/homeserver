@@ -101,9 +101,12 @@ Key choices and why:
      host IP (the relay's forwarding leg). Then `wsl --shutdown` once to apply.
    - Run `windows-firewall.ps1` once as Administrator (inbound :53 UDP+TCP, :8443).
    - Copy `dns-relay.ps1` + `dns-relay-tcp.ps1` to a folder on the Windows host
-     (e.g. `%USERPROFILE%`). Set `PIHOLE_TARGET_HOST` to the server's LAN IP
-     (or edit the placeholder at the top of each script). CSV/logs are written
-     next to the scripts unless `RELAY_DIR` is set.
+     (e.g. `%USERPROFILE%`). **Fill in the server's LAN IP**: either set the
+     `PIHOLE_TARGET_HOST` environment variable, or replace the `192.168.1.X`
+     placeholder at the top of each script with your real IP. (The repo ships
+     the placeholder for public-repo hygiene — a relay started without this fix
+     will sit in "Waiting for Pi-hole" forever.) CSV/logs are written next to
+     the scripts unless `RELAY_DIR` is set.
    - Start the relay:
      `powershell -NoProfile -ExecutionPolicy Bypass -File dns-relay.ps1`
    - **Auto-start** (needs an elevated PowerShell):
