@@ -26,8 +26,13 @@ systemctl restart homeserver
 install -m 644 "$REPO_DIR/gateway/Caddyfile" /etc/caddy/Caddyfile
 mkdir -p /etc/systemd/system/caddy.service.d
 printf '[Service]\nEnvironmentFile=-%s/.env\n' "$REPO_DIR" > /etc/systemd/system/caddy.service.d/env.conf
+systemctl daemon-reload
 
-# 4. Start Caddy and wait for the Let's Encrypt cert (first run takes a moment)
+# 4. Validate the config, then start Caddy and wait for the LE cert (first run)
+if ! caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile; then
+  echo "Caddyfile invalid — check DDNS_HOST in $REPO_DIR/.env"
+  exit 1
+fi
 systemctl restart caddy
 echo "==> waiting for https://$DDNS_HOST/ (LE cert issuance on first run) ..."
 ok=""
