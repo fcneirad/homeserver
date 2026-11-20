@@ -107,19 +107,27 @@ Key choices and why:
      the placeholder for public-repo hygiene — a relay started without this fix
      will sit in "Waiting for Pi-hole" forever.) CSV/logs are written next to
      the scripts unless `RELAY_DIR` is set.
-   - Start the relay:
+   - Start the relay (from an **elevated** PowerShell — port 53 requires admin):
      `powershell -NoProfile -ExecutionPolicy Bypass -File dns-relay.ps1`
-   - **Auto-start** (needs an elevated PowerShell):
+   - **Auto-start** — the relay binds port 53, which is below 1024, so Windows only
+     lets an **elevated** process bind it. The task must therefore run with highest
+     privileges (`/RL HIGHEST`); a non-elevated task will start but fail to bind :53:
      ```powershell
-     schtasks /Create /SC ONLOGON /TN "Pi-hole DNS Relay" /TR "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File %USERPROFILE%\dns-relay.ps1" /F
+     schtasks /Create /SC ONLOGON /TN "Pi-hole DNS Relay" /TR "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File %USERPROFILE%\dns-relay.ps1" /RL HIGHEST /F
      ```
-   - **Watchdog** (same elevation) — the relay's parent process has no supervisor of
+   - **Watchdog** — must *also* run elevated (`/RL HIGHEST`), because it has to kill
+     and restart the (elevated) relay; a non-elevated watchdog gets "Access denied"
+     and silently cannot self-heal. The relay's parent process has no supervisor of
      its own: if it is killed externally (window closed, sign-out), UDP :53 dies
      silently while the orphaned TCP child keeps running. This task restarts the
      relay whenever the UDP listener is missing:
      ```powershell
-     schtasks /Create /SC MINUTE /MO 5 /TN "Pi-hole DNS Relay Watchdog" /TR "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File %USERPROFILE%\relay-watchdog.ps1" /F
+     schtasks /Create /SC MINUTE /MO 5 /TN "Pi-hole DNS Relay Watchdog" /TR "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File %USERPROFILE%\relay-watchdog.ps1" /RL HIGHEST /F
      ```
+     > If a task shows as *failed* in Task Scheduler, open it → **Properties →
+     > General** → tick **"Run with highest privileges"** and set **"Run whether
+     > user is logged on or not"** — Windows will prompt for the account password
+     > on-screen so the elevated task can run unattended.
 4. **Router**: admin UI → LAN/DHCP settings, set DNS Server 1 = the server's LAN IP
    (optionally `1.1.1.1` as Server 2). Every device that gets an IP from this
    router then uses Pi-hole automatically.
