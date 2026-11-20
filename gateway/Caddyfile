@@ -1,5 +1,4 @@
 # gateway/Caddyfile — TEMPLATE for the single-port HTTPS gateway.
-# Phase 1 pilot: homepage only.
 #
 # {env.DDNS_HOST} is a template placeholder, NOT a Caddy feature: setup.sh
 # renders it from DDNS_HOST in .env into /etc/caddy/Caddyfile. Re-run
@@ -9,9 +8,53 @@
 #   - 443: all HTTPS traffic
 #   - 80:  Let's Encrypt HTTP-01 validation (Caddy renews automatically)
 #
-# Adding a service later = add one site block, e.g.:
-#   jellyfin.{env.DDNS_HOST} { reverse_proxy 127.0.0.1:8096 }
+# DNS requirement: an A record for the apex and a wildcard (*) A record,
+# both pointing at the server's public IP.
+#
+# Adding a service later = add one site block + (if no wildcard DNS) one A record.
 
 {env.DDNS_HOST} {
 	reverse_proxy 127.0.0.1:8000
+}
+
+jellyfin.{env.DDNS_HOST} {
+	reverse_proxy 127.0.0.1:8096
+}
+
+radarr.{env.DDNS_HOST} {
+	reverse_proxy 127.0.0.1:7878
+}
+
+sonarr.{env.DDNS_HOST} {
+	reverse_proxy 127.0.0.1:8989
+}
+
+prowlarr.{env.DDNS_HOST} {
+	reverse_proxy 127.0.0.1:9696
+}
+
+seerr.{env.DDNS_HOST} {
+	reverse_proxy 127.0.0.1:5055
+}
+
+bazarr.{env.DDNS_HOST} {
+	reverse_proxy 127.0.0.1:6767
+}
+
+qbittorrent.{env.DDNS_HOST} {
+	reverse_proxy 127.0.0.1:8080
+}
+
+unsloth.{env.DDNS_HOST} {
+	reverse_proxy 127.0.0.1:8888
+}
+
+# Pi-hole's web UI already speaks TLS (self-signed) on :8443, so proxy to it
+# over HTTPS and skip verification of its local cert.
+pihole.{env.DDNS_HOST} {
+	reverse_proxy https://127.0.0.1:8443 {
+		transport http {
+			tls_insecure_skip_verify
+		}
+	}
 }
