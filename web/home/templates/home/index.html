@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block body %}
+<div class="dashboard">
+    <h1>HOME SERVER</h1>
+
+    <main class="category-list">
+        <section class="app-category category-apps">
+            <h2>Apps</h2>
+            <div class="grid-container">
+                <a href="{{ service_urls.jellyfin }}" class="app-button">
+                    <img class="icon" src="{% static 'img/apps/jellyfin.svg' %}" alt="">
+                    <span class="app-title">Jellyfin</span>
+                </a>
+                <a href="{{ service_urls.seerr }}" class="app-button">
+                    <img class="icon" src="{% static 'img/apps/overseerr.svg' %}" alt="">
+                    <span class="app-title">Seerr</span>
+                </a>
+                <a href="{{ service_urls.unsloth }}" class="app-button">
+                    <img class="icon" src="{% static 'img/apps/unsloth.png' %}" alt="">
+                    <span class="app-title">Unsloth</span>
+                </a>
+            </div>
+        </section>
+
+        <section class="app-category category-media-management">
+            <h2>Management</h2>
+            <div class="grid-container">
+                <a href="{{ service_urls.radarr }}" class="app-button">
+                    <img class="icon" src="{% static 'img/apps/radarr.svg' %}" alt="">
+                    <span class="app-title">Radarr</span>
+                </a>
+                <a href="{{ service_urls.sonarr }}" class="app-button">
+                    <img class="icon" src="{% static 'img/apps/sonarr.svg' %}" alt="">
+                    <span class="app-title">Sonarr</span>
+                </a>
+                <a href="{{ service_urls.bazarr }}" class="app-button">
+                    <img class="icon" src="{% static 'img/apps/bazarr.svg' %}" alt="">
+                    <span class="app-title">Bazarr</span>
+                </a>
+                <a href="{{ service_urls.prowlarr }}" class="app-button">
+                    <img class="icon" src="{% static 'img/apps/prowlarr.svg' %}" alt="">
+                    <span class="app-title">Prowlarr</span>
+                </a>
+                <a href="{{ service_urls.qbittorrent }}" class="app-button">
+                    <img class="icon" src="{% static 'img/apps/qbittorrent.svg' %}" alt="">
+                    <span class="app-title">qBittorrent</span>
+                </a>
+                <a href="{{ service_urls.pihole }}" class="app-button" target="_blank" rel="noopener">
+                    <img class="icon" src="{% static 'img/apps/pihole.svg' %}" alt="">
+                    <span class="app-title">Pi-hole</span>
+                </a>
+            </div>
+        </section>
+    </main>
+</div>
+{% endblock %}

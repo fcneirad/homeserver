@@ -1,0 +1,6 @@
+# Never commit live Pi-hole data or secrets
+*.db
+*.sqlite*
+/etc-pihole/
+.env
+secrets/

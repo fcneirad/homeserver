@@ -1,0 +1,137 @@
+/* Base modern styling with dark green background */
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: system-ui, -apple-system, sans-serif;
+    
+    /* Dark green radial gradient */
+    background: radial-gradient(circle at center, #1b4d2e 0%, #0a1c12 100%);
+    color: #ffffff;
+    
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Dashboard container */
+.dashboard {
+    text-align: center;
+    width: 90%;
+    max-width: 800px; 
+    padding: 2rem 0;
+}
+
+.dashboard h1 {
+    font-weight: 300;
+    letter-spacing: 2px;
+    margin-bottom: 3rem;
+    color: #e8f5e9;
+    text-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+/* Responsive grid */
+.grid-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, 160px);
+    justify-content: start;
+    gap: 2rem;
+}
+
+.category-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2.5rem;
+}
+
+.app-category h2 {
+    margin: 0 0 1rem;
+    color: #d1fae5;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-align: left;
+    text-transform: uppercase;
+}
+
+.category-apps { order: 1; }
+.category-media-management { order: 2; }
+
+/* App Button Styling */
+.app-button {
+    /* Glassmorphism card effect */
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 32px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+    
+    aspect-ratio: 1 / 1;
+    
+    /* Stack icon and text vertically */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    
+    text-decoration: none;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* Service logo */
+.app-button .icon {
+    width: 3.8rem;
+    height: 3.8rem;
+    line-height: 1;
+    object-fit: contain;
+}
+
+.app-button .settings-icon {
+    transform: scale(1.35);
+}
+
+/* Button Label Text */
+.app-button .app-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    /* Soft mint green color to match dark green background */
+    color: #86efac; 
+    transition: color 0.3s ease;
+}
+
+/* Hover and active states */
+.app-button:hover, .app-button:active {
+    transform: translateY(-8px) scale(1.05);
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.3);
+    box-shadow: 0 15px 25px rgba(0, 0, 0, 0.4);
+}
+
+/* Brightens the text slightly on hover */
+.app-button:hover .app-title {
+    color: #ffffff;
+}
+
+/* Remove focus outline */
+.app-button:focus {
+    outline: none;
+}
+
+/* Home button (fixed top-left) */
+.home-button {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    background: rgba(0,0,0,0.6);
+    color: #fff;
+    padding: 8px 10px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 600;
+    z-index: 1000;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.home-button:hover { background: rgba(0,0,0,0.8); }

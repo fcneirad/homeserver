@@ -1,0 +1,38 @@
+# ============================================================
+# homeserver-infra — global ignore rules
+# This repo is PUBLIC. Anything that identifies the specific
+# machine, its network, or its users must never be committed.
+# ============================================================
+
+# --- Upstream application installs (binaries/source) ---------
+# These are stock upstream apps, not our code. They are documented
+# in docs/services/ instead of being committed here.
+/bazarr/
+/flaresolverr/
+/prowlarr/
+/radarr/
+/seerr/
+/sonarr/
+
+# --- Python ---------------------------------------------------
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+*.egg-info/
+
+# --- Django ---------------------------------------------------
+web/db.sqlite3
+web/staticfiles/
+
+# --- Secrets, live data, logs (NEVER commit) ------------------
+.env
+secrets/
+*.db
+*.sqlite*
+*.csv
+*.log
+
+# --- OS / editor cruft ---------------------------------------
+.DS_Store
+Thumbs.db
