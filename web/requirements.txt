@@ -1,0 +1,6 @@
+# Runtime dependencies for the Django homepage (web/).
+# Minimum versions (not strict pins) so `pip install -U` can pull security
+# fixes; update.sh upgrades these. Django is pinned to its major line.
+Django>=6.1,<7
+asgiref>=3.11
+sqlparse>=0.6

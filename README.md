@@ -21,10 +21,11 @@ The blueprint + operating manual for a personal homeserver. This repo has two jo
 ├── docs/
 │   ├── architecture.md     ← the server map: services, ports, topology, target design
 │   └── services.md         ← upstream apps: versions + install commands
+├── update.sh               ← security + feature update runner (see below)
 ├── pihole/                 ← Pi-hole DNS tracker/adblocker (fully populated example)
 ├── web/                    ← Django homepage / dashboard (our code)
-├── gateway/                ← single-port HTTPS reverse proxy (design stub, not built yet)
-└── migrate/                ← move-to-new-hardware tooling (stub, not built yet)
+├── gateway/                ← single-port HTTPS reverse proxy (Caddy + Let's Encrypt + Authelia)
+└── migrate/                ← move-to-new-hardware tooling (backup.sh / restore.sh)
 ```
 
 Upstream applications (Jellyfin, Radarr, Sonarr, Prowlarr, Seerr, Bazarr,
@@ -43,19 +44,36 @@ databases and configs stay on the server.
 - **Never commit:** databases (`*.db`, `*.sqlite*`), logs, CSVs (the DNS relay CSV
   is browsing history), `.env`, or anything under `/var/lib`.
 
+## Keeping it updated (security vs features)
+
+Updates are split into two tiers on purpose:
+
+- **Security of OS packages is automatic.** Caddy, fail2ban, Jellyfin,
+  qBittorrent and every system library get distro security patches applied by
+  `unattended-upgrades` (security pocket, daily). You don't run anything for this;
+  see `/var/log/unattended-upgrades/` for what it has applied.
+- **Features + the non-OS surfaces are one command.** Run
+  `sudo bash update.sh` to review and apply: apt feature upgrades, an Authelia
+  bump (pinned in `gateway/setup.sh`), and Django web-app python deps. It then
+  re-runs `gateway/setup.sh` to re-apply config and health-check all hostnames.
+  The self-updating apps (*arrs, Seerr, Bazarr) and Pi-hole are **reported only** —
+  they manage their own updates (their UIs / `pihole -up`).
+
+Flags: `--report` shows status without changing anything; `--yes` applies without
+prompting. Run `--report` first to see what's behind.
+
 ## Quick start (on a fresh box)
 
 1. Copy `.env.example` → `.env` and fill in your values.
 2. Run each service's setup script in dependency order (Pi-hole first, then the
-   media stack, then `web/`). See each folder's README.
+   media stack, then `web/`, then `gateway/setup.sh`). See each folder's README.
 3. Verify with the per-service health checks.
 
-The full "rebuild from zero" entrypoint (`install.sh`) and the migration tooling
-are planned — see `migrate/README.md`.
+To move to new hardware, see `migrate/README.md` (`backup.sh` / `restore.sh`).
 
 ## Roadmap (not yet implemented)
 
-- [ ] **Gateway**: Caddy on :443 + Let's Encrypt + Authelia unified login,
-      generated from a per-service `exposed` flag. See `gateway/README.md`.
-- [ ] **Migration tooling**: `backup.sh` / `restore.sh` for moving hardware.
+- [ ] **Per-service `exposed` flag**: generate the Caddyfile from a config with an
+      `exposed` toggle so hiding a service is one flag flip. See `gateway/README.md`.
+- [ ] **Jellyfin OIDC SSO**: true single sign-on for the native app (optional).
 - [ ] **Per-service folders** for the upstream apps once they get config templates.
