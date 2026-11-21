@@ -35,6 +35,12 @@
 		# v4 forward-auth endpoint (the bare /api/authz path is a base, not a route).
 		uri /api/authz/forward-auth
 		copy_headers Remote-User Remote-Email Remote-Name Remote-Groups
+		# Strip the client's Authorization header from the auth-check request:
+		# apps like Jellyfin send their own scheme ("MediaBrowser <token>") and
+		# Authelia would try to parse it as a Bearer token and reject the whole
+		# request. Only affects the cloned check request — the original request
+		# keeps its header for the app itself.
+		header_up Authorization ""
 	}
 }
 
