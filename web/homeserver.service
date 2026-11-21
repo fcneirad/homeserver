@@ -10,6 +10,9 @@ User=your_user
 Group=your_user
 WorkingDirectory=/path/to/homeserver/web
 Environment=PYTHONUNBUFFERED=1
+# Rendered from .env by gateway/setup.sh (quotes stripped — systemd does not
+# expand shell quoting). Keeps the real SECRET_KEY out of this committed file.
+EnvironmentFile=/etc/systemd/system/homeserver.service.d/django.env
 ExecStart=/path/to/python manage.py runserver 0.0.0.0:80 --noreload
 Restart=on-failure
 RestartSec=5

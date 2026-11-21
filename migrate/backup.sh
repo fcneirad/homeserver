@@ -134,6 +134,7 @@ for u in authelia bazarr homeserver pihole-FTL prowlarr qbittorrent-nox \
   stage "/etc/systemd/system/$u.service"
 done
 stage /etc/systemd/system/jellyfin.service.d
+[ -d /etc/systemd/system/homeserver.service.d ] && stage /etc/systemd/system/homeserver.service.d
 
 # Consistent FTL DB snapshot WITHOUT stopping Pi-hole (DNS stays up).
 # The dir copy above already grabbed it; this replaces it with a

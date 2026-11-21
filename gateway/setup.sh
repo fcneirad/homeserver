@@ -20,6 +20,22 @@ if grep -q 'runserver 0\.0\.0\.0:80' "$UNIT"; then
   sed -i 's|runserver 0\.0\.0\.0:80|runserver 127.0.0.1:8000|' "$UNIT"
   echo "==> homeserver.service now binds 127.0.0.1:8000"
 fi
+# Django env (SECRET_KEY/DEBUG) comes from .env, but systemd does NOT expand
+# shell quoting — the key in .env is single-quoted for bash. We already sourced
+# .env above (set -a), so $DJANGO_* hold the unquoted values; render a clean
+# env file for the unit instead of pointing EnvironmentFile at .env directly.
+DJANGO_ENV=/etc/systemd/system/homeserver.service.d/django.env
+mkdir -p /etc/systemd/system/homeserver.service.d
+{
+  echo "# rendered by gateway/setup.sh from $REPO_DIR/.env — do not edit"
+  if [ -n "${DJANGO_SECRET_KEY:-}" ]; then
+    echo "DJANGO_SECRET_KEY=$DJANGO_SECRET_KEY"
+  fi
+  echo "DJANGO_DEBUG=${DJANGO_DEBUG:-false}"
+} > "$DJANGO_ENV"
+chmod 600 "$DJANGO_ENV"
+grep -q '^EnvironmentFile=' "$UNIT" || sed -i "/^Environment=/a EnvironmentFile=$DJANGO_ENV" "$UNIT"
+echo "==> homeserver.service now loads DJANGO_* from $DJANGO_ENV"
 systemctl daemon-reload
 systemctl restart homeserver
 
