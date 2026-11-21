@@ -109,7 +109,13 @@ backend = systemd
 journal_match = _SYSTEMD_UNIT=authelia.service
 filter = authelia
 JAIL
-systemctl enable --now fail2ban
+# `enable --now` is a NO-OP if fail2ban already runs (it does, for sshd) —
+# the new jail would never be loaded. Restart so the running server picks
+# up the filter + jail, and verify it actually came up healthy.
+systemctl restart fail2ban
+sleep 1
+fail2ban-client status authelia >/dev/null || { echo "authelia jail failed to load — journalctl -u fail2ban"; exit 1; }
+echo "==> fail2ban up (jails: $(fail2ban-client status | grep 'Jail list' | sed 's/.*: //'))"
 
 # 5. Render the Caddyfile template (substitute {env.DDNS_HOST}) and validate it.
 # The Caddyfile format does NOT expand env placeholders, so we render at install
