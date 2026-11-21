@@ -111,9 +111,12 @@ Key choices and why:
      `powershell -NoProfile -ExecutionPolicy Bypass -File dns-relay.ps1`
    - **Auto-start** — the relay binds port 53, which is below 1024, so Windows only
      lets an **elevated** process bind it. The task must therefore run with highest
-     privileges (`/RL HIGHEST`); a non-elevated task will start but fail to bind :53:
+     privileges (`/RL HIGHEST`); a non-elevated task will start but fail to bind :53.
+     Register both tasks **with stored credentials** (`/RU` + `/RP`) — see the note
+     below on why this also kills the console-window flash:
      ```powershell
-     schtasks /Create /SC ONLOGON /TN "Pi-hole DNS Relay" /TR "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File %USERPROFILE%\dns-relay.ps1" /RL HIGHEST /F
+     $cred = Get-Credential   # account name + password; Task Scheduler stores it
+     schtasks /Create /SC ONLOGON /TN "Pi-hole DNS Relay" /TR "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File %USERPROFILE%\dns-relay.ps1" /RU $cred.UserName /RP $cred.GetNetworkCredential().Password /RL HIGHEST /F
      ```
    - **Watchdog** — must *also* run elevated (`/RL HIGHEST`), because it has to kill
      and restart the (elevated) relay; a non-elevated watchdog gets "Access denied"
@@ -122,12 +125,19 @@ Key choices and why:
      silently while the orphaned TCP child keeps running. This task restarts the
      relay whenever the UDP listener is missing:
      ```powershell
-     schtasks /Create /SC MINUTE /MO 5 /TN "Pi-hole DNS Relay Watchdog" /TR "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File %USERPROFILE%\relay-watchdog.ps1" /RL HIGHEST /F
+     schtasks /Create /SC MINUTE /MO 5 /TN "Pi-hole DNS Relay Watchdog" /TR "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File %USERPROFILE%\relay-watchdog.ps1" /RU $cred.UserName /RP $cred.GetNetworkCredential().Password /RL HIGHEST /F
      ```
-     > If a task shows as *failed* in Task Scheduler, open it → **Properties →
-     > General** → tick **"Run with highest privileges"** and set **"Run whether
-     > user is logged on or not"** — Windows will prompt for the account password
-     > on-screen so the elevated task can run unattended.
+     > **Why stored credentials (and the window flash):** a task registered *without*
+     > `/RU`/`/RP` runs in "Run only when user is logged on" mode, so Task Scheduler
+     > allocates a real console for every run — you see a brief PowerShell window
+     > flash (every 5 minutes from the watchdog). `-WindowStyle Hidden` only hides
+     > the window *after* PowerShell starts; it cannot prevent the initial flash.
+     > With stored credentials the task runs in session 0 with no console at all,
+     > and also keeps running when nobody is logged in. Verify:
+     > `(Get-ScheduledTask "Pi-hole DNS Relay").Principal.LogonType` should print
+     > `Password`, not `Interactive`. To fix an existing task without recreating it:
+     > Task Scheduler → Properties → General → **"Run whether user is logged on or
+     > not"** (prompts for the password), or delete + re-run the commands above.
 4. **Router**: admin UI → LAN/DHCP settings, set DNS Server 1 = the server's LAN IP
    (optionally `1.1.1.1` as Server 2). Every device that gets an IP from this
    router then uses Pi-hole automatically.

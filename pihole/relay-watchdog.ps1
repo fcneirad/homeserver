@@ -5,9 +5,13 @@
 # dies silently and per-device tracking stops while the orphaned TCP child
 # keeps running. This watchdog detects that state and restarts everything.
 #
-# Run from a scheduled task every few minutes (see pihole/README.md):
+# Run from a scheduled task every few minutes (see pihole/README.md). Register
+# with stored credentials (/RU + /RP) so it runs in session 0 without a console
+# window flash, and also when nobody is logged on:
+#   $cred = Get-Credential
 #   schtasks /Create /SC MINUTE /MO 5 /TN "Pi-hole DNS Relay Watchdog" `
-#     /TR "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File <dir>\relay-watchdog.ps1" /F
+#     /TR "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File <dir>\relay-watchdog.ps1" `
+#     /RU $cred.UserName /RP $cred.GetNetworkCredential().Password /RL HIGHEST /F
 #
 # Silent when healthy; logs only when it takes action.
 
