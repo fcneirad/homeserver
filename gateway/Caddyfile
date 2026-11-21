@@ -13,6 +13,16 @@
 #
 # Adding a service later = add one site block + (if no wildcard DNS) one A record.
 #
+# Global options: HTTP/3 (h3) is disabled because the router only forwards
+# TCP 443, not UDP 443. Without this, browsers outside the LAN try QUIC first,
+# time out on the blocked UDP port, and only then fall back to TCP — which
+# makes pages feel slow/stuck (visible as 408s in Authelia logs).
+{
+	servers {
+		protocols h1 h2
+	}
+}
+
 # --- Authentication (Authelia) -------------------------------------------
 # Every service below imports the `authelia` snippet, which makes Caddy ask
 # Authelia (127.0.0.1:9091) before proxying. Unauthenticated requests get a
