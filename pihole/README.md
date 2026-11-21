@@ -111,14 +111,9 @@ Key choices and why:
      `powershell -NoProfile -ExecutionPolicy Bypass -File dns-relay.ps1`
    - **Auto-start** — the relay binds port 53, which is below 1024, so Windows only
      lets an **elevated** process bind it. The task must therefore run with highest
-     privileges (`/RL HIGHEST`); a non-elevated task will start but fail to bind :53.
-     Register both tasks **with stored credentials** — give `/RU <your-user>` (local
-     account name, not a Microsoft email) and *omit* `/RP`: schtasks then prompts for
-     the password directly (hidden input). See the note below on why this also kills
-     the console-window flash:
+     privileges (`/RL HIGHEST`); a non-elevated task will start but fail to bind :53:
      ```powershell
-     schtasks /Create /SC ONLOGON /TN "Pi-hole DNS Relay" /TR "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File %USERPROFILE%\dns-relay.ps1" /RU <your-user> /RL HIGHEST /F
-     # -> type the account password at the prompt (hidden)
+     schtasks /Create /SC ONLOGON /TN "Pi-hole DNS Relay" /TR "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File %USERPROFILE%\dns-relay.ps1" /RL HIGHEST /F
      ```
    - **Watchdog** — must *also* run elevated (`/RL HIGHEST`), because it has to kill
      and restart the (elevated) relay; a non-elevated watchdog gets "Access denied"
@@ -127,24 +122,29 @@ Key choices and why:
      silently while the orphaned TCP child keeps running. This task restarts the
      relay whenever the UDP listener is missing:
      ```powershell
-     schtasks /Create /SC MINUTE /MO 5 /TN "Pi-hole DNS Relay Watchdog" /TR "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File %USERPROFILE%\relay-watchdog.ps1" /RU <your-user> /RL HIGHEST /F
-     # -> type the account password at the prompt (hidden)
+     schtasks /Create /SC MINUTE /MO 5 /TN "Pi-hole DNS Relay Watchdog" /TR "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File %USERPROFILE%\relay-watchdog.ps1" /RL HIGHEST /F
      ```
-     > **Why stored credentials (and the window flash):** a task registered *without*
-     > `/RU` runs in "Run only when user is logged on" mode, so Task Scheduler
-     > allocates a real console for every run — you see a brief PowerShell window
-     > flash (every 5 minutes from the watchdog). `-WindowStyle Hidden` only hides
-     > the window *after* PowerShell starts; it cannot prevent the initial flash.
-     > With stored credentials the task runs in session 0 with no console at all,
-     > and also keeps running when nobody is logged in. Verify:
-     > `(Get-ScheduledTask "Pi-hole DNS Relay").Principal.LogonType` should print
-     > `Password`, not `Interactive`. To fix an existing task without recreating it:
-     > Task Scheduler → Properties → General → **"Run whether user is logged on or
-     > not"** (prompts for the password), or delete + re-run the commands above.
-     > **Pitfall:** don't build `/RP` from `Get-Credential` — with a Microsoft
-     > account (MFA) the returned credential object often has an *empty* password,
-     > so `schtasks /Create` fails silently-ish and you end up with no tasks.
-     > Omitting `/RP` and letting schtasks prompt is the reliable path.
+   - **Make both tasks console-less (required — fixes the window flash).** A task
+     created as above runs in "Run only when user is logged on" mode, so Task
+     Scheduler allocates a real console for every run: you see a brief PowerShell
+     window flash (every 5 minutes from the watchdog). `-WindowStyle Hidden` only
+     hides the window *after* PowerShell starts; it cannot prevent the initial
+     flash. Switch both tasks to **S4U** ("Run whether user is logged on or not",
+     no stored password) in an elevated PowerShell:
+     ```powershell
+     Set-ScheduledTask -TaskName 'Pi-hole DNS Relay' -Principal (New-ScheduledTaskPrincipal -UserId <your-user> -LogonType S4U -RunLevel Highest)
+     Set-ScheduledTask -TaskName 'Pi-hole DNS Relay Watchdog' -Principal (New-ScheduledTaskPrincipal -UserId <your-user> -LogonType S4U -RunLevel Highest)
+     ```
+     Verify: `Get-ScheduledTask 'Pi-hole DNS Relay','Pi-hole DNS Relay Watchdog' |
+     ForEach-Object { "$($_.TaskName) LogonType=$($_.Principal.LogonType)" }` — both
+     must print `LogonType=S4U`. S4U runs in session 0 (no console ever, no flash)
+     and keeps working when nobody is logged in, without storing any password.
+     > **Pitfalls hit live:** (1) `schtasks /Create ... /RU <user>` *without* `/RP`,
+     > run elevated as that same user, does NOT prompt for a password and silently
+     > keeps `Interactive` logon type — the flash persists. (2) Building `/RP` from
+     > `Get-Credential` fails with Microsoft accounts (MFA): the returned credential
+     > object has an empty password, so the task is never created. The
+     > `Set-ScheduledTask` + S4U step above is the reliable path.
 4. **Router**: admin UI → LAN/DHCP settings, set DNS Server 1 = the server's LAN IP
    (optionally `1.1.1.1` as Server 2). Every device that gets an IP from this
    router then uses Pi-hole automatically.

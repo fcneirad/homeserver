@@ -5,13 +5,13 @@
 # dies silently and per-device tracking stops while the orphaned TCP child
 # keeps running. This watchdog detects that state and restarts everything.
 #
-# Run from a scheduled task every few minutes (see pihole/README.md). Register
-# with stored credentials (/RU, omit /RP so schtasks prompts for the password)
-# so it runs in session 0 without a console window flash, and also when nobody
-# is logged on:
+# Run from a scheduled task every few minutes (see pihole/README.md). After
+# creating the task, switch it to S4U logon type so it runs in session 0 with
+# no console window flash and also when nobody is logged on:
 #   schtasks /Create /SC MINUTE /MO 5 /TN "Pi-hole DNS Relay Watchdog" `
-#     /TR "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File <dir>\relay-watchdog.ps1" `
-#     /RU <your-user> /RL HIGHEST /F
+#     /TR "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File <dir>\relay-watchdog.ps1" /RL HIGHEST /F
+#   Set-ScheduledTask -TaskName 'Pi-hole DNS Relay Watchdog' `
+#     -Principal (New-ScheduledTaskPrincipal -UserId <your-user> -LogonType S4U -RunLevel Highest)
 #
 # Silent when healthy; logs only when it takes action.
 
