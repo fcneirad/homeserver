@@ -103,6 +103,14 @@ flowchart LR
 - **Unified login.** Authelia sits in front of everything as an auth gate (works
   for any app) with one identity + TOTP MFA. Jellyfin gets true SSO via OIDC; the
   rest keep their own password field, set to the same credential.
+- **Native apps bypass the gate over the LAN.** Devices that can't do a
+  browser-based login (e.g. a TV running the native Jellyfin app) point straight
+  at `http://<server-LAN-IP>:8096`, skipping Caddy + Authelia entirely. This is
+  safe because the service ports are **not forwarded** — only LAN devices can
+  reach them — and the app still authenticates with real credentials (it just
+  skips MFA, which a TV can't do anyway). Trade-off: if the server's LAN IP
+  changes, update it in the device. Phones/laptops keep using the HTTPS
+  subdomains through the gate.
 - **Hiding services later.** The Caddyfile is generated from a per-service config
   with an `exposed` flag. Flipping it off removes a service from public DNS while
   keeping it reachable on the LAN via Pi-hole.
@@ -114,18 +122,23 @@ flowchart LR
 - Every exposed service has built-in login; add **fail2ban** in front of Caddy.
 - Keep anything without auth LAN-only.
 
-## Ports table (current)
+## Ports table (current — converged)
 
-| Port | Service | Notes |
-|---|---|---|
-| 80 | Django homepage | will move behind Caddy in the target design |
-| 53 (UDP+TCP) | Windows relay → FTL | LAN only, never forwarded |
-| 1053 | Pi-hole FTL DNS | internal to the relay path |
-| 8443 | Pi-hole web UI | self-signed; linked from homepage |
-| 8096 / 7878 / 8989 / 9696 / 5055 / 6767 | Jellyfin / Radarr / Sonarr / Prowlarr / Seerr / Bazarr | |
-| 8191 | FlareSolverr | internal to the *arrs |
-| 8080 | qBittorrent webui | |
-| 8888 | Unsloth | |
+The router forwards **only TCP 80 + 443**. Everything else is LAN-only.
 
-In the target design, all of these sit behind Caddy on :443 and are no longer
-individually exposed.
+| Port | Service | Internet-facing? | Notes |
+|---|---|---|---|
+| 80 (TCP) | Caddy | ✅ forwarded | Let's Encrypt HTTP-01 validation + redirect to HTTPS |
+| 443 (TCP) | Caddy | ✅ forwarded | the single entry point — all services via subdomain, behind Authelia |
+| 53 (UDP+TCP) | Windows relay → FTL | ❌ LAN only | never forwarded (open-resolver risk); LAN devices use it via DHCP DNS |
+| 1053 | Pi-hole FTL DNS | ❌ internal | the relay's forwarding leg |
+| 8443 | Pi-hole web UI | ❌ LAN only | reached via `pihole.<host>` through Caddy, or directly on the LAN |
+| 8096 / 7878 / 8989 / 9696 / 5055 / 6767 | Jellyfin / Radarr / Sonarr / Prowlarr / Seerr / Bazarr | ❌ LAN only | reached via subdomains through Caddy; direct LAN access is how native apps (e.g. a TV) skip the MFA gate |
+| 8191 | FlareSolverr | ❌ internal | used by the *arrs |
+| 8080 | qBittorrent webui | ❌ LAN only | via `qbittorrent.<host>` through Caddy |
+| 8888 | Unsloth | ❌ LAN only | via `unsloth.<host>` through Caddy |
+
+> **Why the service ports stay un-forwarded:** it's what makes the single-port
+> design secure. Every internet request must pass through Caddy + Authelia; there
+> are no side doors on native ports. (This was verified after a router cleanup —
+> see the commit history for the port-forward audit.)
